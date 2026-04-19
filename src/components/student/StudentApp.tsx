@@ -172,18 +172,48 @@ export function StudentApp() {
     }
   };
 
-  const handleModuleSubmit = () => {
-    if (runtimeState.submitRequiresConfirmation) {
-      uiActions.setShowSubmitConfirm(true);
+  const submitRuntimeBackedAttempt = async () => {
+    await attemptActions.submitAttempt();
+    runtimeActions.setPhase('post-exam');
+  };
+
+  const submitCurrentModule = async () => {
+    if (runtimeState.runtimeBacked) {
+      await submitRuntimeBackedAttempt();
       return;
     }
 
     runtimeActions.submitModule();
   };
 
-  const confirmModuleSubmit = () => {
+  const handleModuleSubmit = async () => {
+    if (runtimeState.submitRequiresConfirmation) {
+      uiActions.setShowSubmitConfirm(true);
+      return;
+    }
+
+    await submitCurrentModule();
+  };
+
+  const confirmModuleSubmit = async () => {
     uiActions.setShowSubmitConfirm(false);
-    runtimeActions.submitModule();
+    await submitCurrentModule();
+  };
+
+  const handleAnswerChange = (questionId: string, answer: Parameters<typeof runtimeActions.setAnswer>[1]) => {
+    runtimeActions.setAnswer(questionId, answer);
+    attemptActions.persistAnswer(questionId, answer);
+  };
+
+  const handleFlagToggle = (questionId: string) => {
+    const nextFlagged = !runtimeState.flags[questionId];
+    runtimeActions.toggleFlag(questionId);
+    attemptActions.persistFlag(questionId, nextFlagged);
+  };
+
+  const handleWritingChange = (taskId: string, text: string) => {
+    runtimeActions.setWritingAnswer(taskId, text);
+    attemptActions.persistWritingAnswer(taskId, text);
   };
 
   const answeredCount = countAnsweredQuestions(runtimeState.allQuestions, runtimeState.answers);
@@ -292,29 +322,29 @@ export function StudentApp() {
           <StudentReading
             state={examState}
             answers={runtimeState.answers}
-            onAnswerChange={runtimeActions.setAnswer}
+            onAnswerChange={handleAnswerChange}
             currentQuestionId={runtimeState.currentQuestionId}
             onNavigate={runtimeActions.setCurrentQuestionId}
             flags={runtimeState.flags}
-            onToggleFlag={runtimeActions.toggleFlag}
+            onToggleFlag={handleFlagToggle}
           />
         ) : null}
         {runtimeState.currentModule === 'listening' ? (
           <StudentListening
             state={examState}
             answers={runtimeState.answers}
-            onAnswerChange={runtimeActions.setAnswer}
+            onAnswerChange={handleAnswerChange}
             currentQuestionId={runtimeState.currentQuestionId}
             onNavigate={runtimeActions.setCurrentQuestionId}
             flags={runtimeState.flags}
-            onToggleFlag={runtimeActions.toggleFlag}
+            onToggleFlag={handleFlagToggle}
           />
         ) : null}
         {runtimeState.currentModule === 'writing' ? (
           <StudentWriting
             state={examState}
             writingAnswers={runtimeState.writingAnswers}
-            onWritingChange={runtimeActions.setWritingAnswer}
+            onWritingChange={handleWritingChange}
             onSubmit={handleModuleSubmit}
             currentQuestionId={runtimeState.currentQuestionId}
             onNavigate={runtimeActions.setCurrentQuestionId}

@@ -23,6 +23,7 @@ import {
   TFNGBlock,
   TFNGQuestion,
 } from '../../types';
+import { ProtectedInput } from './ProtectedInput';
 
 interface QuestionRendererProps {
   question:
@@ -44,6 +45,12 @@ interface QuestionRendererProps {
   currentQuestionId?: string | null | undefined;
   flags?: Record<string, boolean> | undefined;
   onToggleFlag?: ((id: string) => void) | undefined;
+  security?: {
+    preventAutofill: boolean;
+    preventAutocorrect: boolean;
+  } | undefined;
+  sessionId?: string | undefined;
+  studentId?: string | undefined;
 }
 
 export function QuestionRenderer({
@@ -58,6 +65,9 @@ export function QuestionRenderer({
   currentQuestionId = null,
   flags = {},
   onToggleFlag,
+  security = { preventAutofill: false, preventAutocorrect: false },
+  sessionId,
+  studentId,
 }: QuestionRendererProps) {
   const stringArrayAnswer = Array.isArray(answer) ? answer : [];
 
@@ -109,17 +119,16 @@ export function QuestionRenderer({
     <div id={`question-${slotId}`} className={getSlotClassName(slotId)}>
       <div className="flex items-center gap-3">
         <span className="min-w-[32px] font-bold text-gray-900">{slotNumber}.</span>
-        <input
+        <ProtectedInput
           type="text"
           name={slotId}
           value={value}
           onChange={(event) => changeValue(event.target.value)}
           className="w-full rounded-md border-2 border-gray-300 px-4 py-2 text-base transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
           placeholder="Enter answer..."
-          autoComplete="off"
-          spellCheck={false}
-          autoCorrect="off"
-          autoCapitalize="off"
+          security={security}
+          sessionId={sessionId}
+          studentId={studentId}
           aria-label={`Answer for question ${slotNumber}`}
         />
         {renderFlagButton(slotId)}
@@ -170,17 +179,16 @@ export function QuestionRenderer({
           <span className="text-gray-800">{q.prompt}</span>
         </div>
         <div className="ml-9 mt-2">
-          <input
+          <ProtectedInput
             type="text"
             name={q.id}
             value={typeof answer === 'string' ? answer : ''}
             onChange={(event) => onChange(event.target.value)}
             className="w-full max-w-md rounded-md border-2 border-gray-300 px-4 py-2 text-base transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
             placeholder="Enter answer..."
-            autoComplete="off"
-            spellCheck={false}
-            autoCorrect="off"
-            autoCapitalize="off"
+            security={security}
+            sessionId={sessionId}
+            studentId={studentId}
             aria-label={`Answer for question ${number}`}
           />
         </div>
@@ -298,17 +306,16 @@ export function QuestionRenderer({
           <span className="text-gray-800">Label {q.label}</span>
         </div>
         <div className="ml-9 mt-2">
-          <input
+          <ProtectedInput
             type="text"
             name={q.id}
             value={typeof answer === 'string' ? answer : ''}
             onChange={(event) => onChange(event.target.value)}
             className="w-full max-w-md rounded-md border-2 border-gray-300 px-4 py-2 text-base transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
             placeholder="Enter label..."
-            autoComplete="off"
-            spellCheck={false}
-            autoCorrect="off"
-            autoCapitalize="off"
+            security={security}
+            sessionId={sessionId}
+            studentId={studentId}
             aria-label={`Answer for question ${num}`}
           />
         </div>
@@ -354,17 +361,16 @@ export function QuestionRenderer({
           <span className="text-gray-800">{q.prompt}</span>
         </div>
         <div className="ml-9 mt-2">
-          <input
+          <ProtectedInput
             type="text"
             name={q.id}
             value={typeof answer === 'string' ? answer : ''}
             onChange={(event) => onChange(event.target.value)}
             className="w-full max-w-md rounded-md border-2 border-gray-300 px-4 py-2 text-base transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
             placeholder="Enter answer..."
-            autoComplete="off"
-            spellCheck={false}
-            autoCorrect="off"
-            autoCapitalize="off"
+            security={security}
+            sessionId={sessionId}
+            studentId={studentId}
             aria-label={`Answer for question ${num}`}
           />
         </div>
@@ -391,17 +397,16 @@ export function QuestionRenderer({
                   )}`}
                 >
                   <span className="min-w-[24px] text-sm font-bold text-blue-700">{number + index}</span>
-                  <input
+                  <ProtectedInput
                     type="text"
                     name={getSlotId(index, `${q.id}:${index}`)}
                     value={stringArrayAnswer[index] ?? ''}
                     onChange={(event) => updateIndexedAnswer(index, event.target.value, blanks)}
                     className="w-28 rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                     placeholder="Answer..."
-                    autoComplete="off"
-                    spellCheck={false}
-                    autoCorrect="off"
-                    autoCapitalize="off"
+                    security={security}
+                    sessionId={sessionId}
+                    studentId={studentId}
                     aria-label={`Answer for question ${number + index}`}
                   />
                   {renderFlagButton(getSlotId(index, `${q.id}:${index}`))}
@@ -435,17 +440,16 @@ export function QuestionRenderer({
                   )}`}
                 >
                   <span className="min-w-[24px] text-sm font-bold text-blue-700">{number + index}</span>
-                  <input
+                  <ProtectedInput
                     type="text"
                     name={getSlotId(index, `${noteQuestion.id}:${index}`)}
                     value={stringArrayAnswer[index] ?? ''}
                     onChange={(event) => updateIndexedAnswer(index, event.target.value, blanks)}
                     className="w-28 rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                     placeholder="Answer..."
-                    autoComplete="off"
-                    spellCheck={false}
-                    autoCorrect="off"
-                    autoCapitalize="off"
+                    security={security}
+                    sessionId={sessionId}
+                    studentId={studentId}
                     aria-label={`Answer for question ${number + index}`}
                   />
                   {renderFlagButton(getSlotId(index, `${noteQuestion.id}:${index}`))}
@@ -556,17 +560,16 @@ export function QuestionRenderer({
                       className={`border border-gray-200 px-3 py-2 align-top ${getSlotClassName(slot.slotId)}`}
                     >
                       <div className="mb-2 text-sm font-bold text-blue-700">{number + slot.index}</div>
-                      <input
+                      <ProtectedInput
                         type="text"
                         name={slot.slotId}
                         value={stringArrayAnswer[slot.index] ?? ''}
                         onChange={(event) => updateIndexedAnswer(slot.index, event.target.value, tableBlock.cells.length)}
                         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                         placeholder="Enter answer..."
-                        autoComplete="off"
-                        spellCheck={false}
-                        autoCorrect="off"
-                        autoCapitalize="off"
+                        security={security}
+                        sessionId={sessionId}
+                        studentId={studentId}
                         aria-label={`Answer for question ${number + slot.index}`}
                       />
                       <div className="mt-2 flex justify-end">{renderFlagButton(slot.slotId)}</div>

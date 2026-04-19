@@ -11,7 +11,11 @@ import {
   XCircle,
   Pause,
   Play,
-  ArrowUpDown
+  ArrowUpDown,
+  Copy,
+  Type,
+  MonitorOff,
+  ShieldAlert
 } from 'lucide-react';
 import { SessionAuditLog, AuditActionType } from '../../types';
 import { Badge } from '../ui/Badge';
@@ -89,6 +93,11 @@ export function AuditLogPanel({ auditLogs, sessionId, onClose }: AuditLogPanelPr
     DEVICE_CONTINUITY_FAILED: AlertTriangle,
     CLIPBOARD_BLOCKED: AlertTriangle,
     CONTEXT_MENU_BLOCKED: AlertTriangle,
+    AUTOFILL_SUSPECTED: Type,
+    PASTE_BLOCKED: Copy,
+    REPLACEMENT_SUSPECTED: AlertTriangle,
+    SCREEN_CHECK_UNSUPPORTED: MonitorOff,
+    SCREEN_CHECK_PERMISSION_DENIED: ShieldAlert,
     AUTO_ACTION: AlertTriangle
   };
 
@@ -119,6 +128,11 @@ export function AuditLogPanel({ auditLogs, sessionId, onClose }: AuditLogPanelPr
     DEVICE_CONTINUITY_FAILED: 'bg-red-100 text-red-800 border-red-200',
     CLIPBOARD_BLOCKED: 'bg-amber-100 text-amber-800 border-amber-200',
     CONTEXT_MENU_BLOCKED: 'bg-amber-100 text-amber-800 border-amber-200',
+    AUTOFILL_SUSPECTED: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    PASTE_BLOCKED: 'bg-orange-100 text-orange-800 border-orange-200',
+    REPLACEMENT_SUSPECTED: 'bg-red-100 text-red-800 border-red-200',
+    SCREEN_CHECK_UNSUPPORTED: 'bg-gray-100 text-gray-800 border-gray-200',
+    SCREEN_CHECK_PERMISSION_DENIED: 'bg-purple-100 text-purple-800 border-purple-200',
     AUTO_ACTION: 'bg-gray-100 text-gray-800 border-gray-200'
   };
 
@@ -279,6 +293,11 @@ export function AuditLogPanel({ auditLogs, sessionId, onClose }: AuditLogPanelPr
                   <option value="NOTE_CREATED">Note Created</option>
                   <option value="HANDOVER_INITIATED">Handover Initiated</option>
                   <option value="AUTO_ACTION">Auto Action</option>
+                  <option value="AUTOFILL_SUSPECTED">Autofill Suspected</option>
+                  <option value="PASTE_BLOCKED">Paste Blocked</option>
+                  <option value="REPLACEMENT_SUSPECTED">Replacement Suspected</option>
+                  <option value="SCREEN_CHECK_UNSUPPORTED">Screen Check Unsupported</option>
+                  <option value="SCREEN_CHECK_PERMISSION_DENIED">Screen Check Permission Denied</option>
                 </select>
               </div>
               <div>

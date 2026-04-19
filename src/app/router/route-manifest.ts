@@ -33,6 +33,7 @@ export const routeManifest = {
   student: {
     path: '/student',
     children: {
+      register: '/student/:scheduleId/register',
       session: '/student/:scheduleId/:studentId?',
     },
   },

@@ -60,6 +60,8 @@ export function StudentNetworkProvider({
     attemptState.attempt?.integrity.lastReconnectAt ?? null,
   );
   const heartbeatLostRef = useRef(false);
+  const missedHeartbeatsRef = useRef(0);
+  const lastHeartbeatTimeRef = useRef(Date.now());
 
   useEffect(() => {
     setLastDisconnectAt(attemptState.attempt?.integrity.lastDisconnectAt ?? null);
@@ -237,18 +239,66 @@ export function StudentNetworkProvider({
       return;
     }
 
-    const intervalId = window.setInterval(() => {
+    const intervalId = window.setInterval(async () => {
+      const now = Date.now();
+      const timeSinceLastHeartbeat = now - lastHeartbeatTimeRef.current;
+      const intervalMs = getHeartbeatIntervalMs(policy);
+      
+      // If heartbeat was recorded (time since last heartbeat is reasonable), reset missed count
+      if (timeSinceLastHeartbeat < intervalMs * 2) {
+        missedHeartbeatsRef.current = 0;
+      } else {
+        missedHeartbeatsRef.current += 1;
+        
+        const warningThreshold = config?.security.heartbeatWarningThreshold ?? 2;
+        const hardBlockThreshold = config?.security.heartbeatHardBlockThreshold ?? 4;
+        
+        // Log warning at warning threshold
+        if (missedHeartbeatsRef.current === warningThreshold) {
+          void saveStudentAuditEvent(
+            scheduleId,
+            'HEARTBEAT_MISSED',
+            {
+              missedCount: missedHeartbeatsRef.current,
+              threshold: warningThreshold,
+            },
+            attemptState.attemptId ?? undefined,
+          );
+        }
+        
+        // Log and block at hard threshold
+        if (missedHeartbeatsRef.current >= hardBlockThreshold) {
+          runtimeActions.addViolation(
+            'HEARTBEAT_LOST',
+            'high',
+            `Heartbeat lost after ${missedHeartbeatsRef.current} missed beats.`,
+          );
+          runtimeActions.setBlockingReason('heartbeat_lost');
+          void saveStudentAuditEvent(
+            scheduleId,
+            'HEARTBEAT_LOST',
+            {
+              missedCount: missedHeartbeatsRef.current,
+              threshold: hardBlockThreshold,
+            },
+            attemptState.attemptId ?? undefined,
+          );
+        }
+      }
+      
+      lastHeartbeatTimeRef.current = now;
       void attemptActions.recordHeartbeat('heartbeat');
     }, getHeartbeatIntervalMs(policy));
 
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [attemptActions, attemptState.attempt, policy, runtimeState.phase]);
+  }, [attemptActions, attemptState.attempt, config?.security, policy, runtimeActions, runtimeState.phase, scheduleId]);
 
   useEffect(() => {
     if (runtimeState.phase !== 'exam') {
       heartbeatLostRef.current = false;
+      missedHeartbeatsRef.current = 0;
       return;
     }
 

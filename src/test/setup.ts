@@ -25,11 +25,15 @@ const localStorageMock = (() => {
   };
 })();
 
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
-});
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'localStorage', {
+    value: localStorageMock,
+  });
+}
 
-Object.defineProperty(Element.prototype, 'scrollIntoView', {
-  configurable: true,
-  value: () => {},
-});
+if (typeof Element !== 'undefined') {
+  Object.defineProperty(Element.prototype, 'scrollIntoView', {
+    configurable: true,
+    value: () => {},
+  });
+}

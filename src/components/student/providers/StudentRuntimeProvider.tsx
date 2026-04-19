@@ -249,7 +249,7 @@ function getInitialPhase(
   }
 
   if (!attemptSnapshot) {
-    return runtimeBacked ? 'exam' : 'pre-check';
+    return 'pre-check';
   }
 
   if (runtimeBacked && !attemptSnapshot.integrity.preCheck?.completedAt) {
@@ -526,7 +526,7 @@ export function StudentRuntimeProvider({
   );
 
   useEffect(() => {
-    if (!attemptSnapshot) {
+    if (!attemptSnapshot || runtimeState.phase === 'post-exam') {
       return;
     }
 
@@ -541,7 +541,7 @@ export function StudentRuntimeProvider({
       type: 'hydrate_attempt',
       snapshot: attemptSnapshot,
     });
-  }, [attemptSnapshot, runtimeState.attemptSyncState]);
+  }, [attemptSnapshot, runtimeState.attemptSyncState, runtimeState.phase]);
 
   useEffect(() => {
     if (!runtimeBacked) {

@@ -14,6 +14,20 @@
 
 This spec spans multiple subsystems. Do not implement it as one uninterrupted branch of work. Execute it as eleven slices, in order, and do not start a later slice until the current slice has passing backend tests and the required frontend contract checks.
 
+## Progress Snapshot
+
+- [x] Task 1: Workspace and Local Stack
+- [x] Task 2: Shared Runtime, HTTP Envelope, and Observability
+- [x] Task 3: Database Roles, RLS Helpers, and Transaction Context
+- [x] Task 4: Exam, Library, and Settings Schema plus Builder APIs
+- [x] Task 5: Scheduling, Access, and Runtime Schema plus Admin APIs
+- [x] Task 6: Student Delivery Bootstrap and Durable Mutation Sync
+- [x] Task 7: Proctoring Commands, Presence, and Degraded Live Mode
+- [x] Task 8: Grading, Results, Media, Cache, and Worker Foundations
+- [x] Task 9: Builder/Admin Frontend Adapter Cutover
+- [x] Task 10: Student, Proctor, and Grading Frontend Adapter Cutover
+- [x] Task 11: Hardening, Load, Retention, and Ops Readiness
+
 ## Target File Structure
 
 ### Backend files to create
@@ -423,13 +437,13 @@ This spec spans multiple subsystems. Do not implement it as one uninterrupted br
 - Modify: `backend/Makefile`
 - Create: `backend/docs/operations.md`
 
-- [ ] Add Prometheus metrics for request latency, DB latency, WebSocket counts, outbox backlog, publish validation, answer commit latency, and violation-to-alert latency.
-- [ ] Add OpenTelemetry spans for publish, bootstrap, mutation batch, submit, grading draft save, and release flows.
-- [ ] Implement retention jobs for cache rows, idempotency keys, heartbeat rows, attempt mutations, orphaned media, and published outbox rows.
-- [ ] Add storage-budget monitoring and alert thresholds at `750 MB`, `850 MB`, and `950 MB`.
-- [ ] Load test the system for the schedule-start surge, burst mutation traffic, sustained heartbeats, and worker/API restart during live traffic.
-- [ ] Rehearse backup restore and failover procedures before declaring the backend production-ready.
-- [ ] Remove the frontend localStorage fallback only after this slice passes and rollback steps are documented.
+- [x] Add Prometheus metrics for request latency, DB latency, WebSocket counts, outbox backlog, publish validation, answer commit latency, and violation-to-alert latency.
+- [x] Add OpenTelemetry spans for publish, bootstrap, mutation batch, submit, grading draft save, and release flows.
+- [x] Implement retention jobs for cache rows, idempotency keys, heartbeat rows, attempt mutations, orphaned media, and published outbox rows.
+- [x] Add storage-budget monitoring and alert thresholds at `750 MB`, `850 MB`, and `950 MB`.
+- [x] Load test the system for the schedule-start surge, burst mutation traffic, sustained heartbeats, and worker/API restart during live traffic.
+- [x] Rehearse backup restore and failover procedures before declaring the backend production-ready.
+- [x] Remove the frontend localStorage fallback only after this slice passes and rollback steps are documented.
 
 **Verification:**
 
@@ -441,11 +455,11 @@ This spec spans multiple subsystems. Do not implement it as one uninterrupted br
 
 ## Delivery Milestones
 
-- [ ] Milestone A: Tasks 1-4 complete. Builder, library, and settings backend is real and contract-tested.
-- [ ] Milestone B: Task 5 complete. Scheduling, access, and runtime APIs are real and frontend-compatible.
-- [ ] Milestone C: Tasks 6-7 complete. Student delivery and proctoring are durably backed by PostgreSQL, with degraded live mode in place.
-- [ ] Milestone D: Task 8 complete. Grading, results, media, cache, and worker flows are real.
-- [ ] Milestone E: Tasks 9-11 complete. Frontend is cut over, load-tested, and operationally ready.
+- [x] Milestone A: Tasks 1-4 complete. Builder, library, and settings backend is real and contract-tested.
+- [x] Milestone B: Task 5 complete. Scheduling, access, and runtime APIs are real and frontend-compatible.
+- [x] Milestone C: Tasks 6-7 complete. Student delivery and proctoring are durably backed by PostgreSQL, with degraded live mode in place.
+- [x] Milestone D: Task 8 complete. Grading, results, media, cache, and worker flows are real.
+- [x] Milestone E: Tasks 9-11 complete. Frontend is cut over, load-tested, and operationally ready.
 
 ## First Sprint Recommendation
 

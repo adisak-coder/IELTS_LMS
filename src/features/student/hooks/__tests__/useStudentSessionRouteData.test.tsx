@@ -1,11 +1,20 @@
+import type { ReactNode } from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultConfig } from '../../../../constants/examDefaults';
+import { AuthSessionProvider } from '../../../auth/authSession';
+import { authService } from '../../../../services/authService';
 import { examRepository } from '../../../../services/examRepository';
 import { studentAttemptRepository } from '../../../../services/studentAttemptRepository';
 import type { ExamEntity, ExamSchedule, ExamVersion } from '../../../../types/domain';
 import { SCHEMA_VERSION } from '../../../../types/domain';
 import { useStudentSessionRouteData } from '../useStudentSessionRouteData';
+
+function createWrapper() {
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return <AuthSessionProvider>{children}</AuthSessionProvider>;
+  };
+}
 
 function createSeedData() {
   const examId = 'exam-1';
@@ -88,6 +97,17 @@ describe('useStudentSessionRouteData', () => {
   beforeEach(async () => {
     localStorage.clear();
     sessionStorage.clear();
+    vi.spyOn(authService, 'getSession').mockResolvedValue({
+      user: {
+        id: 'student-user-1',
+        email: 'alice@example.com',
+        displayName: 'Alice Roe',
+        role: 'student',
+        state: 'active',
+      },
+      csrfToken: 'csrf-1',
+      expiresAt: '2026-01-01T12:00:00.000Z',
+    });
 
     const { exam, schedule, version } = createSeedData();
     await examRepository.saveExam(exam);
@@ -95,9 +115,17 @@ describe('useStudentSessionRouteData', () => {
     await examRepository.saveSchedule(schedule);
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('creates separate attempts for different candidates in the same cohort', async () => {
-    const first = renderHook(() => useStudentSessionRouteData('sched-1', 'alice'));
-    const second = renderHook(() => useStudentSessionRouteData('sched-1', 'bob'));
+    const first = renderHook(() => useStudentSessionRouteData('sched-1', 'alice'), {
+      wrapper: createWrapper(),
+    });
+    const second = renderHook(() => useStudentSessionRouteData('sched-1', 'bob'), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => {
       expect(first.result.current.attemptSnapshot).not.toBeNull();
@@ -115,7 +143,9 @@ describe('useStudentSessionRouteData', () => {
   });
 
   it('reuses the same anonymous candidate identity across remounts', async () => {
-    const first = renderHook(() => useStudentSessionRouteData('sched-1'));
+    const first = renderHook(() => useStudentSessionRouteData('sched-1'), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => {
       expect(first.result.current.attemptSnapshot).not.toBeNull();
@@ -126,7 +156,9 @@ describe('useStudentSessionRouteData', () => {
 
     first.unmount();
 
-    const second = renderHook(() => useStudentSessionRouteData('sched-1'));
+    const second = renderHook(() => useStudentSessionRouteData('sched-1'), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => {
       expect(second.result.current.attemptSnapshot).not.toBeNull();

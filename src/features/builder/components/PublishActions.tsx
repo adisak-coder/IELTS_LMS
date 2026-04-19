@@ -176,7 +176,7 @@ export function PublishActions({
             disabled={!canPublish}
             className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all duration-200 shadow-sm hover:shadow-md disabled:bg-slate-300 disabled:cursor-not-allowed disabled:shadow-none"
             title={tooltipText}
-            aria-label={canPublish ? 'Publish & schedule exam' : tooltipText}
+            aria-label="Publish & Schedule"
           >
             Publish & Schedule
           </button>

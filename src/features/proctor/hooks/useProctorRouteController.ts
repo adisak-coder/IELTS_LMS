@@ -1,6 +1,13 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { useAsyncPolling } from '@app/hooks/useAsyncPolling';
+import {
+  backendGet,
+  isBackendProctoringEnabled,
+  mapBackendRuntime,
+  mapBackendSchedule,
+  rememberAttemptSchedule,
+} from '@services/backendBridge';
 import { examDeliveryService } from '@services/examDeliveryService';
 import { examRepository } from '@services/examRepository';
 import { studentAttemptRepository } from '@services/studentAttemptRepository';
@@ -216,6 +223,141 @@ function mapAuditLogsToAlerts(
     );
 }
 
+function mapBackendSessionSummary(payload: {
+  attemptId: string;
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  scheduleId: string;
+  status: StudentSession['status'];
+  currentSection: StudentSession['currentSection'];
+  timeRemaining: number;
+  runtimeStatus: StudentSession['runtimeStatus'];
+  runtimeCurrentSection?: StudentSession['runtimeCurrentSection'] | null | undefined;
+  runtimeTimeRemainingSeconds: number;
+  runtimeSectionStatus?: StudentSession['runtimeSectionStatus'] | null | undefined;
+  runtimeWaiting: boolean;
+  violations: StudentSession['violations'];
+  warnings: number;
+  lastActivity: string;
+  examId: string;
+  examName: string;
+}): StudentSession {
+  rememberAttemptSchedule(payload.attemptId, payload.scheduleId);
+
+  return {
+    id: payload.attemptId,
+    studentId: payload.studentId,
+    name: payload.studentName,
+    email: payload.studentEmail,
+    scheduleId: payload.scheduleId,
+    status: payload.status,
+    currentSection: payload.currentSection,
+    timeRemaining: payload.timeRemaining,
+    runtimeStatus: payload.runtimeStatus ?? 'not_started',
+    runtimeCurrentSection: payload.runtimeCurrentSection ?? null,
+    runtimeTimeRemainingSeconds: payload.runtimeTimeRemainingSeconds,
+    runtimeSectionStatus: payload.runtimeSectionStatus ?? undefined,
+    runtimeWaiting: payload.runtimeWaiting,
+    violations: payload.violations ?? [],
+    warnings: payload.warnings,
+    lastActivity: payload.lastActivity,
+    examId: payload.examId,
+    examName: payload.examName,
+  };
+}
+
+function mapBackendAlert(payload: {
+  id: string;
+  severity: ProctorAlert['severity'];
+  type: string;
+  studentName: string;
+  studentId: string;
+  timestamp: string;
+  message: string;
+  isAcknowledged: boolean;
+}): ProctorAlert {
+  return {
+    id: payload.id,
+    severity: payload.severity,
+    type: payload.type,
+    studentName: payload.studentName,
+    studentId: payload.studentId,
+    timestamp: payload.timestamp,
+    message: payload.message,
+    isAcknowledged: payload.isAcknowledged,
+  };
+}
+
+function mapBackendAuditLog(payload: {
+  id: string;
+  scheduleId: string;
+  actor: string;
+  actionType: SessionAuditLog['actionType'];
+  targetStudentId?: string | null | undefined;
+  payload?: Record<string, unknown> | null | undefined;
+  createdAt: string;
+}): SessionAuditLog {
+  return {
+    id: payload.id,
+    timestamp: payload.createdAt,
+    actor: payload.actor,
+    actionType: payload.actionType,
+    targetStudentId: payload.targetStudentId ?? undefined,
+    sessionId: payload.scheduleId,
+    payload: payload.payload ?? undefined,
+  };
+}
+
+function mapBackendNote(payload: {
+  id: string;
+  scheduleId: string;
+  author: string;
+  category: SessionNote['category'] | string;
+  content: string;
+  isResolved?: boolean | undefined;
+  createdAt: string;
+}): SessionNote {
+  return {
+    id: payload.id,
+    scheduleId: payload.scheduleId,
+    author: payload.author,
+    timestamp: payload.createdAt,
+    content: payload.content,
+    category:
+      payload.category === 'incident' || payload.category === 'handover'
+        ? payload.category
+        : 'general',
+    isResolved: payload.isResolved ?? false,
+  };
+}
+
+function mapBackendViolationRule(payload: {
+  id: string;
+  scheduleId: string;
+  triggerType: ViolationRule['triggerType'];
+  threshold: number;
+  specificViolationType?: string | null | undefined;
+  specificSeverity?: ViolationRule['specificSeverity'] | null | undefined;
+  action: ViolationRule['action'];
+  isEnabled: boolean;
+  createdAt: string;
+  createdBy: string;
+}): ViolationRule {
+  return {
+    id: payload.id,
+    scheduleId: payload.scheduleId,
+    triggerType: payload.triggerType,
+    threshold: payload.threshold,
+    specificViolationType: payload.specificViolationType ?? undefined,
+    specificSeverity: payload.specificSeverity ?? undefined,
+    action: payload.action,
+    isEnabled: payload.isEnabled,
+    createdAt: payload.createdAt,
+    createdBy: payload.createdBy,
+  };
+}
+
 export interface ProctorRouteController {
   alerts: ProctorAlert[];
   auditLogs: SessionAuditLog[];
@@ -250,6 +392,7 @@ export function useProctorRouteController(): ProctorRouteController {
   const [violationRules, setViolationRules] = useState<ViolationRule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pollIntervalMs, setPollIntervalMs] = useState(4_000);
 
   const syncRuntimeSnapshots = useCallback(async (sourceSchedules: ExamSchedule[]) => {
     if (sourceSchedules.length === 0) {
@@ -274,6 +417,73 @@ export function useProctorRouteController(): ProctorRouteController {
   }, []);
 
   const loadMonitoringState = useCallback(async () => {
+    if (isBackendProctoringEnabled()) {
+      const summaries = await backendGet<Array<{
+        schedule: Parameters<typeof mapBackendSchedule>[0];
+        runtime: Parameters<typeof mapBackendRuntime>[0];
+        degradedLiveMode: boolean;
+      }>>('/v1/proctor/sessions');
+
+      if (summaries.length === 0) {
+        setSchedules([]);
+        setRuntimeSnapshots([]);
+        setSessions([]);
+        setAlerts([]);
+        setAuditLogs([]);
+        setNotes([]);
+        setViolationRules([]);
+        setPollIntervalMs(4_000);
+        return;
+      }
+
+      const details = await Promise.all(
+        summaries.map((summary) =>
+          backendGet<{
+            schedule: Parameters<typeof mapBackendSchedule>[0];
+            runtime: Parameters<typeof mapBackendRuntime>[0];
+            sessions: Array<Parameters<typeof mapBackendSessionSummary>[0]>;
+            alerts: Array<Parameters<typeof mapBackendAlert>[0]>;
+            auditLogs: Array<Parameters<typeof mapBackendAuditLog>[0]>;
+            notes: Array<Parameters<typeof mapBackendNote>[0]>;
+            violationRules: Array<Parameters<typeof mapBackendViolationRule>[0]>;
+            degradedLiveMode: boolean;
+          }>(`/v1/proctor/sessions/${summary.schedule.id}`),
+        ),
+      );
+
+      setPollIntervalMs(details.some((detail) => detail.degradedLiveMode) ? 1_000 : 4_000);
+      setSchedules(details.map((detail) => mapBackendSchedule(detail.schedule)));
+      setRuntimeSnapshots(
+        details.map((detail) =>
+          mapBackendRuntime(detail.runtime, mapBackendSchedule(detail.schedule)),
+        ),
+      );
+      setSessions(
+        details
+          .flatMap((detail) => detail.sessions)
+          .map(mapBackendSessionSummary)
+          .sort(
+            (left, right) =>
+              new Date(right.lastActivity).getTime() - new Date(left.lastActivity).getTime(),
+          ),
+      );
+      setAlerts(
+        details
+          .flatMap((detail) => detail.alerts)
+          .map(mapBackendAlert)
+          .sort(
+            (left, right) =>
+              new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime(),
+          ),
+      );
+      setAuditLogs(details.flatMap((detail) => detail.auditLogs).map(mapBackendAuditLog));
+      setNotes(details.flatMap((detail) => detail.notes).map(mapBackendNote));
+      setViolationRules(
+        details.flatMap((detail) => detail.violationRules).map(mapBackendViolationRule),
+      );
+      return;
+    }
+
     const loadedSchedules = await examRepository.getAllSchedules();
     const [nextRuntimeSnapshots, allAttempts, nextAuditLogs, nextNotes] = await Promise.all([
       syncRuntimeSnapshots(loadedSchedules),
@@ -328,7 +538,7 @@ export function useProctorRouteController(): ProctorRouteController {
 
   useAsyncPolling(loadMonitoringState, {
     enabled: !isLoading && !error,
-    intervalMs: 1_000,
+    intervalMs: pollIntervalMs,
     maxIntervalMs: 4_000,
   });
 
@@ -382,7 +592,9 @@ export function useProctorRouteController(): ProctorRouteController {
 
   const evaluateViolationRules = useCallback(
     async (scheduleId: string, studentSessions: StudentSession[]) => {
-      const rules = await examRepository.getViolationRulesByScheduleId(scheduleId);
+      const rules = isBackendProctoringEnabled()
+        ? violationRules.filter((rule) => rule.scheduleId === scheduleId)
+        : await examRepository.getViolationRulesByScheduleId(scheduleId);
       const activeRules = rules.filter((rule) => rule.isEnabled);
 
       if (activeRules.length === 0) {
@@ -419,21 +631,23 @@ export function useProctorRouteController(): ProctorRouteController {
             continue;
           }
 
-          await examRepository.saveAuditLog({
-            id: generateId('audit'),
-            timestamp: new Date().toISOString(),
-            actor: 'system',
-            actionType: 'AUTO_ACTION',
-            targetStudentId: session.id,
-            sessionId: scheduleId,
-            payload: {
-              ruleId: rule.id,
-              ruleAction: rule.action,
-              triggerType: rule.triggerType,
-              threshold: rule.threshold,
-              violationCount: session.violations.length,
-            },
-          });
+          if (!isBackendProctoringEnabled()) {
+            await examRepository.saveAuditLog({
+              id: generateId('audit'),
+              timestamp: new Date().toISOString(),
+              actor: 'system',
+              actionType: 'AUTO_ACTION',
+              targetStudentId: session.id,
+              sessionId: scheduleId,
+              payload: {
+                ruleId: rule.id,
+                ruleAction: rule.action,
+                triggerType: rule.triggerType,
+                threshold: rule.threshold,
+                violationCount: session.violations.length,
+              },
+            });
+          }
 
           if (rule.action === 'warn') {
             await examDeliveryService.warnStudent(
@@ -451,7 +665,7 @@ export function useProctorRouteController(): ProctorRouteController {
 
       await loadMonitoringState();
     },
-    [loadMonitoringState],
+    [loadMonitoringState, violationRules],
   );
 
   return {

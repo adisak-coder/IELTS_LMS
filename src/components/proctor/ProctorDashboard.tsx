@@ -10,6 +10,7 @@ import { isScheduleReadyToStart } from '../../utils/scheduleUtils';
 import { examRepository } from '../../services/examRepository';
 import { examDeliveryService } from '../../services/examDeliveryService';
 import { useStudentFilters } from './hooks/useStudentFilters';
+import { logger } from '../../utils/logger';
 
 interface ProctorDashboardProps {
   schedules: ExamSchedule[];
@@ -271,7 +272,7 @@ export const ProctorDashboard = React.memo(function ProctorDashboard({
     }
 
     if (!deliveryResult.success) {
-      console.error('Failed to execute student action:', deliveryResult.error);
+      logger.error('Failed to execute student action:', deliveryResult.error);
       return;
     }
 
